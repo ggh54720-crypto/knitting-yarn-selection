@@ -6,150 +6,163 @@
 <title>手混線配色</title>
 
 <style>
-body {
-  font-family: sans-serif;
-  background: #f5f1ea;
-  padding: 20px;
-}
+body { font-family:sans-serif; background:#f5f1ea; padding:16px; }
+.app { max-width:420px; margin:auto; background:#fff; border-radius:20px; padding:16px; }
+header { display:flex; justify-content:space-between; align-items:center; }
 
-.app {
-  max-width: 420px;
-  margin: auto;
-  background: #fff;
-  border-radius: 20px;
-  padding: 20px;
-}
+.yarns { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:12px; }
+.yarn { border:2px solid #eee; border-radius:12px; padding:6px; text-align:center; }
+.yarn img { width:100%; border-radius:8px; }
 
-.yarns {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-}
+button { width:100%; padding:14px; border-radius:12px; border:none; margin-top:12px; font-size:16px; }
+.primary { background:#ff8f66; color:#fff; }
+.secondary { background:#444; color:#fff; }
 
-.yarn {
-  border: 2px solid #eee;
-  border-radius: 12px;
-  padding: 8px;
-  text-align: center;
-}
+.hidden { display:none; }
 
-.yarn img {
-  width: 100%;
-  border-radius: 8px;
-}
+.card { border:1px solid #ddd; border-radius:14px; padding:10px; margin-bottom:12px; }
+.card img { width:100%; border-radius:10px; }
 
-button {
-  width: 100%;
-  padding: 14px;
-  border-radius: 12px;
-  border: none;
-  margin-top: 12px;
-  font-size: 16px;
-}
-
-.primary {
-  background: #ff8f66;
-  color: #fff;
-}
-
-.secondary {
-  background: #444;
-  color: #fff;
-}
-
-.preview img {
-  width: 100%;
-  border-radius: 12px;
-  margin-top: 12px;
-}
+.row { display:flex; justify-content:space-between; align-items:center; gap:6px; }
 </style>
 </head>
 
 <body>
-
 <div class="app">
 
-  <h2>🧶 我要配手混線</h2>
+<header>
+  <h3>🧶 手混線</h3>
+  <button onclick="showCart()">🛒</button>
+</header>
 
-  <!-- 選線區 -->
-  <div id="selector">
-    <div class="yarns">
+<!-- 首頁 -->
+<div id="home">
+  <input id="search" placeholder="搜尋線材"
+    oninput="filterYarns()"
+    style="width:100%;padding:10px;border-radius:10px;border:1px solid #ddd;">
 
-      <label class="yarn">
-        <input type="checkbox" value="A">
-        <img src="images/A.jpg">
-        <div>A 線</div>
-      </label>
+  <div class="yarns">
 
-      <label class="yarn">
-        <input type="checkbox" value="B">
-        <img src="images/B.jpg">
-        <div>B 線</div>
-      </label>
+    <label class="yarn" data-name="奶茶燕麥 暖色 米色">
+      <input type="checkbox" value="A">
+      <img src="images/A.jpg">
+      <div>奶茶燕麥</div>
+    </label>
 
-      <label class="yarn">
-        <input type="checkbox" value="C">
-        <img src="images/C.jpg">
-        <div>C 線</div>
-      </label>
+    <label class="yarn" data-name="霧藍海鹽 冷色 藍">
+      <input type="checkbox" value="B">
+      <img src="images/B.jpg">
+      <div>霧藍海鹽</div>
+    </label>
 
-    </div>
+    <label class="yarn" data-name="森林橄欖 綠 冷色">
+      <input type="checkbox" value="C">
+      <img src="images/C.jpg">
+      <div>森林橄欖</div>
+    </label>
 
-    <button class="primary" onclick="makePreview()">
-      產生混線預覽
-    </button>
   </div>
 
-  <!-- 預覽區 -->
-  <div id="preview" class="preview" style="display:none;">
-    <img id="mixImg">
-    <div id="info"></div>
+  <button class="primary" onclick="makePreview()">產生混線預覽</button>
+</div>
 
-    <button class="primary" onclick="addToCart()">
-      加入購物車
-    </button>
+<!-- 預覽 -->
+<div id="preview" class="hidden">
+  <img id="mixImg">
+  <p id="mixInfo"></p>
 
-    <button class="secondary" onclick="backHome()">
-      回到首頁（保留選擇）
-    </button>
-  </div>
+  <button class="primary" onclick="addToCart()">加入購物車</button>
+  <button class="secondary" onclick="backHome()">回首頁</button>
+</div>
+
+<!-- 購物車 -->
+<div id="cart" class="hidden">
+  <h3>購物車</h3>
+  <div id="cartList"></div>
+  <button class="secondary" onclick="backHome()">回首頁</button>
+</div>
 
 </div>
 
 <script>
 let currentKey = "";
+let currentSelected = [];
+
+function filterYarns() {
+  const k = search.value.toLowerCase();
+  document.querySelectorAll(".yarn").forEach(y => {
+    y.style.display = y.dataset.name.toLowerCase().includes(k)
+      ? "block" : "none";
+  });
+}
 
 function makePreview() {
-  const selected = [...document.querySelectorAll('input:checked')]
+  const selected = [...document.querySelectorAll("input:checked")]
     .map(i => i.value)
     .sort();
 
-  if (selected.length === 0) {
+  if (!selected.length) {
     alert("請至少選一種線材");
     return;
   }
 
-  currentKey = selected.join("-");
-  document.getElementById("mixImg").src =
-    `images/mix/${currentKey}.jpg`;
+  currentSelected = selected;
+  currentKey = "MIX-" + selected.join("-");
+  mixImg.src = `images/mix/${selected.join("-")}.jpg`;
+  mixInfo.innerText = currentKey;
 
-  document.getElementById("info").innerText =
-    "你選的線材：" + selected.join(" + ");
-
-  document.getElementById("selector").style.display = "none";
-  document.getElementById("preview").style.display = "block";
+  home.classList.add("hidden");
+  preview.classList.remove("hidden");
 }
 
 function backHome() {
-  document.getElementById("preview").style.display = "none";
-  document.getElementById("selector").style.display = "block";
+  preview.classList.add("hidden");
+  cart.classList.add("hidden");
+  home.classList.remove("hidden");
 }
 
 function addToCart() {
   const cart = JSON.parse(localStorage.getItem("cart") || "[]");
-  cart.push({ combo: currentKey });
+  cart.push({ key: currentKey, combo: [...currentSelected] });
   localStorage.setItem("cart", JSON.stringify(cart));
-  alert("已加入購物車（示意）");
+  alert("已加入購物車");
+}
+
+function showCart() {
+  home.classList.add("hidden");
+  preview.classList.add("hidden");
+  cart.classList.remove("hidden");
+
+  cartList.innerHTML = "";
+  const cartData = JSON.parse(localStorage.getItem("cart") || "[]");
+
+  cartData.forEach((item, i) => {
+    const div = document.createElement("div");
+    div.className = "card";
+    div.innerHTML = `
+      <div class="row">
+        <input type="checkbox">
+        <strong>${item.key}</strong>
+        <button onclick="copyCode('${item.key}')">📋</button>
+      </div>
+      <img src="images/mix/${item.combo.join("-")}.jpg">
+      <button onclick="edit(${i})">✏️ 修改配色</button>
+    `;
+    cartList.appendChild(div);
+  });
+}
+
+function copyCode(text) {
+  navigator.clipboard.writeText(text);
+}
+
+function edit(index) {
+  const item = JSON.parse(localStorage.getItem("cart"))[index];
+  document.querySelectorAll("input[type=checkbox]").forEach(c => c.checked = false);
+  item.combo.forEach(v => {
+    document.querySelector(`input[value="${v}"]`).checked = true;
+  });
+  backHome();
 }
 </script>
 
