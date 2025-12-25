@@ -24,6 +24,15 @@ button { width:100%; padding:14px; border-radius:12px; border:none; margin-top:1
 .card img { width:100%; border-radius:10px; }
 
 .row { display:flex; justify-content:space-between; align-items:center; gap:6px; }
+
+.notice {
+  background:#fff3cd;
+  border:1px solid #ffeeba;
+  padding:10px;
+  border-radius:10px;
+  font-size:14px;
+  margin-bottom:12px;
+}
 </style>
 </head>
 
@@ -34,6 +43,10 @@ button { width:100%; padding:14px; border-radius:12px; border:none; margin-top:1
   <h3>🧶 手混線</h3>
   <button onclick="showCart()">🛒</button>
 </header>
+
+<div id="lineNotice" class="notice hidden">
+  LINE 內建瀏覽器無法使用購物車功能，請點右上角「⋯」→ 在瀏覽器中開啟
+</div>
 
 <!-- 首頁 -->
 <div id="home">
@@ -71,7 +84,7 @@ button { width:100%; padding:14px; border-radius:12px; border:none; margin-top:1
   <img id="mixImg">
   <p id="mixInfo"></p>
 
-  <button class="primary" onclick="addToCart()">加入購物車</button>
+  <button class="primary" onclick="handleAdd()">加入購物車</button>
   <button class="secondary" onclick="backHome()">回首頁</button>
 </div>
 
@@ -85,33 +98,18 @@ button { width:100%; padding:14px; border-radius:12px; border:none; margin-top:1
 </div>
 
 <script>
-/* ===== 購物車容錯核心 ===== */
-let memoryCart = [];
-
-function storageAvailable() {
-  try {
-    const test = "__test__";
-    localStorage.setItem(test, test);
-    localStorage.removeItem(test);
-    return true;
-  } catch (e) {
-    return false;
-  }
+/* ===== LINE 偵測 ===== */
+const isLine = navigator.userAgent.includes("Line");
+if (isLine) {
+  document.getElementById("lineNotice").classList.remove("hidden");
 }
 
+/* ===== localStorage ===== */
 function getCart() {
-  if (storageAvailable()) {
-    return JSON.parse(localStorage.getItem("cart") || "[]");
-  }
-  return memoryCart;
+  return JSON.parse(localStorage.getItem("cart") || "[]");
 }
-
 function saveCart(cart) {
-  if (storageAvailable()) {
-    localStorage.setItem("cart", JSON.stringify(cart));
-  } else {
-    memoryCart = cart;
-  }
+  localStorage.setItem("cart", JSON.stringify(cart));
 }
 
 /* ===== 狀態 ===== */
@@ -152,19 +150,27 @@ function backHome() {
   home.classList.remove("hidden");
 }
 
+function handleAdd() {
+  if (isLine) {
+    alert("請用 Safari / Chrome 開啟本頁才能使用購物車");
+    return;
+  }
+  addToCart();
+}
+
 function addToCart() {
   const cart = getCart();
   cart.push({ key: currentKey, combo: [...currentSelected] });
   saveCart(cart);
-
-  if (!storageAvailable()) {
-    alert("目前瀏覽器限制，購物車僅暫存在此頁，請用 Safari / Chrome 開啟");
-  } else {
-    alert("已加入購物車");
-  }
+  alert("已加入購物車");
 }
 
 function showCart() {
+  if (isLine) {
+    alert("LINE 內建瀏覽器無法使用購物車，請改用瀏覽器開啟");
+    return;
+  }
+
   home.classList.add("hidden");
   preview.classList.add("hidden");
   cart.classList.remove("hidden");
@@ -182,7 +188,6 @@ function showCart() {
     div.className = "card";
     div.innerHTML = `
       <div class="row">
-        <input type="checkbox">
         <strong>${item.key}</strong>
         <button onclick="copyCode('${item.key}')">📋</button>
       </div>
