@@ -7,30 +7,28 @@
 
 <style>
 body { font-family:sans-serif; background:#f5f1ea; padding:16px; }
-.app { max-width:800px; width:100%; margin:auto; background:#fff; border-radius:20px; padding:16px; transition: all 0.3s ease; }
+.app { max-width:420px; margin:auto; background:#fff; border-radius:20px; padding:16px; }
 header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
 
-.yarns { display:grid; grid-template-columns:repeat(auto-fit, minmax(100px,1fr)); gap:12px; margin-top:12px; }
+.yarns { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:12px; }
 .yarn { border:2px solid #eee; border-radius:12px; padding:6px; text-align:center; transition: transform 0.2s, border 0.2s; }
 .yarn:hover { transform: scale(1.05); }
 .yarn.selected { border-color:#ff8f66; }
 .yarn img { width:100%; border-radius:8px; }
 
-button { padding:10px 14px; border-radius:12px; border:none; font-size:16px; cursor:pointer; transition: all 0.2s; }
+button { width:100%; padding:14px; border-radius:12px; border:none; margin-top:12px; font-size:16px; cursor:pointer; transition:all 0.2s; }
 button:hover { opacity:0.8; }
 .primary { background:#ff8f66; color:#fff; }
 .secondary { background:#444; color:#fff; }
 
 .hidden { display:none; }
-.show { display:block; }
 
-.card { border:1px solid #ddd; border-radius:14px; padding:10px; margin-bottom:12px; transition: all 0.3s; }
+.card { border:1px solid #ddd; border-radius:14px; padding:10px; margin-bottom:12px; }
 .card img { width:100%; border-radius:10px; }
 
 .row { display:flex; align-items:center; gap:6px; }
 .row strong { flex:1; }
 
-/* toast 提示 */
 #toast {
   position: fixed;
   bottom: 30px;
@@ -45,41 +43,8 @@ button:hover { opacity:0.8; }
   z-index:1000;
 }
 
-/* 下方預覽區 + 滑入動畫 */
-#previewContainer {
-  margin-top:20px;
-  border-top:1px solid #ddd;
-  padding-top:12px;
-  text-align:center;
-  transform: translateY(20px);
-  opacity: 0;
-  transition: transform 0.4s ease, opacity 0.4s ease;
-}
-#previewContainer.show {
-  transform: translateY(0);
-  opacity: 1;
-}
-
-/* 多縮圖滑動 */
-#previewSlider {
-  display:flex; 
-  overflow-x:auto; 
-  gap:8px; 
-  padding:8px;
-}
-#previewSlider img {
-  width:120px; 
-  height:80px; 
-  border-radius:8px; 
-  cursor:pointer; 
-  transition: transform 0.2s, border 0.2s; 
-  border:2px solid #eee;
-}
-#previewSlider img.selected { border-color:#ff8f66; transform:scale(1.05); }
-
-@media (min-width:600px){
-  .yarns { grid-template-columns:repeat(3,1fr); }
-}
+#previewContainer { margin-top:20px; text-align:center; }
+#previewContainer img { max-width:100%; border-radius:12px; }
 </style>
 </head>
 
@@ -91,42 +56,39 @@ button:hover { opacity:0.8; }
   <button type="button" id="cartBtn" onclick="showCart()">🛒 0</button>
 </header>
 
-<div id="home" class="show">
-  <input id="search" placeholder="搜尋線材或顏色"
+<div id="home">
+  <input id="search" placeholder="搜尋線材"
     oninput="filterYarns()"
     style="width:100%;padding:10px;border-radius:10px;border:1px solid #ddd;">
 
   <div class="yarns">
-    <label class="yarn" data-name="奶茶燕麥" data-color="beige">
+    <label class="yarn" data-name="奶茶燕麥">
       <input type="checkbox" value="A">
       <img src="images/A.jpg">
       <div>奶茶燕麥</div>
     </label>
 
-    <label class="yarn" data-name="霧藍海鹽" data-color="blue">
+    <label class="yarn" data-name="霧藍海鹽">
       <input type="checkbox" value="B">
       <img src="images/B.jpg">
       <div>霧藍海鹽</div>
     </label>
 
-    <label class="yarn" data-name="森林橄欖" data-color="green">
+    <label class="yarn" data-name="森林橄欖">
       <input type="checkbox" value="C">
       <img src="images/C.jpg">
       <div>森林橄欖</div>
     </label>
   </div>
 
-  <button type="button" class="primary" onclick="showPreview()">產生混線預覽</button>
+  <button type="button" class="primary" onclick="makePreview()">產生混線預覽</button>
 </div>
 
-<!-- 下方預覽區 -->
 <div id="previewContainer" class="hidden">
-  <div id="previewSlider"></div>
+  <img id="mixImg">
   <p id="mixInfo"></p>
-  <div style="display:flex; gap:8px; justify-content:center; margin-top:8px;">
-    <button type="button" class="primary" onclick="addToCart()">加入購物車</button>
-    <button type="button" class="secondary" onclick="cancelPreview()">取消</button>
-  </div>
+  <button type="button" class="primary" onclick="addToCart()">加入購物車</button>
+  <button type="button" class="secondary" onclick="cancelPreview()">取消</button>
 </div>
 
 <div id="cart" class="hidden">
@@ -142,144 +104,77 @@ button:hover { opacity:0.8; }
 </div>
 
 <div id="toast"></div>
-
 </div>
 
 <script>
-let currentKey = "";
-let currentSelected = [];
-let savedSelection = []; 
+let currentKey="", currentSelected=[], savedSelection=[];
 
-// toast
 function showToast(msg){
-  const t = document.getElementById("toast");
-  t.innerText = msg;
+  const t=document.getElementById("toast");
+  t.innerText=msg;
   t.style.opacity=1;
-  t.classList.add("show");
   setTimeout(()=>t.style.opacity=0,1500);
 }
 
-// filter
-function filterYarns() {
-  const k = search.value.toLowerCase();
-  document.querySelectorAll(".yarn").forEach(y => {
-    const name = y.dataset.name.toLowerCase();
-    const color = y.dataset.color.toLowerCase();
-    y.style.display = (name.includes(k) || color.includes(k)) ? "block" : "none";
-  });
-}
-
-// 組合生成
-function getAllCombos(selected){
-  const combos = [];
-  const n = selected.length;
-  for(let k=1; k<=n; k++) combine(selected,k,[],combos);
-  return combos;
-}
-function combine(arr,k,path,combos){
-  if(path.length===k){ combos.push([...path].sort()); return; }
-  for(let i=0;i<arr.length;i++){
-    path.push(arr[i]);
-    combine(arr.slice(i+1),k,path,combos);
-    path.pop();
-  }
-}
-
-// 顯示下方多縮圖預覽
-function showPreview() {
-  const selected = [...document.querySelectorAll("#home input:checked")].map(i=>i.value).sort();
-  if(!selected.length){ showToast("請至少選一種線材"); return; }
-
-  currentSelected = [...selected];
-  savedSelection = [...selected];
-
-  const combos = getAllCombos(selected);
-  const slider = document.getElementById("previewSlider");
-  slider.innerHTML="";
-
-  combos.forEach((combo,i)=>{
-    const img = document.createElement("img");
-    const key = "MIX-"+combo.join("-");
-    img.src=`images/mix/${combo.join("-")}.jpg`;
-    img.onerror=()=>{ img.src="images/placeholder.jpg"; };
-    if(i===0){ img.classList.add("selected"); currentKey=key; }
-    img.addEventListener("click", ()=>{
-      document.querySelectorAll("#previewSlider img").forEach(im=>im.classList.remove("selected"));
-      img.classList.add("selected");
-      currentSelected = combo;
-      currentKey = key;
-      document.getElementById("mixInfo").innerText=currentKey;
-    });
-    slider.appendChild(img);
-  });
-
-  document.getElementById("mixInfo").innerText=currentKey;
-
-  // 高亮勾選線材
+function filterYarns(){
+  const k=search.value.toLowerCase();
   document.querySelectorAll(".yarn").forEach(y=>{
-    const input = y.querySelector("input");
-    if(input.checked) y.classList.add("selected");
-    else y.classList.remove("selected");
+    y.style.display=y.dataset.name.toLowerCase().includes(k)?"block":"none";
   });
-
-  const preview = document.getElementById("previewContainer");
-  preview.classList.remove("hidden");
-  setTimeout(()=>preview.classList.add("show"),50);
 }
 
-// 取消
+function makePreview(){
+  const selected=[...document.querySelectorAll("#home input:checked")].map(i=>i.value).sort();
+  if(!selected.length){ showToast("請至少選一種線材"); return; }
+  currentSelected=[...selected];
+  savedSelection=[...selected];
+  currentKey="MIX-"+selected.join("-");
+  mixImg.src=`images/mix/${selected.join("-")}.jpg`;
+  mixInfo.innerText=currentKey;
+  document.getElementById("home").classList.add("hidden");
+  document.getElementById("previewContainer").classList.remove("hidden");
+}
+
 function cancelPreview(){
-  const preview=document.getElementById("previewContainer");
-  preview.classList.remove("show");
-  preview.addEventListener('transitionend',()=>{ preview.classList.add("hidden"); }, {once:true});
-  currentSelected=[...savedSelection];
-  document.querySelectorAll(".yarn").forEach(y=>y.classList.remove("selected"));
+  document.getElementById("previewContainer").classList.add("hidden");
+  document.getElementById("home").classList.remove("hidden");
 }
 
-// 加入購物車
 function addToCart(){
   const cart=JSON.parse(localStorage.getItem("cart")||"[]");
-  if(!cart.some(item=>item.key===currentKey)){
-    cart.push({key:currentKey, combo:[...currentSelected], timestamp:Date.now()});
-    localStorage.setItem("cart",JSON.stringify(cart));
-    updateCartCount();
-    showToast("已加入購物車");
-  } else showToast("此配色已在購物車中");
-
-  const preview=document.getElementById("previewContainer");
-  preview.classList.remove("show");
-  preview.addEventListener('transitionend',()=>{ preview.classList.add("hidden"); }, {once:true});
-
+  cart.push({key:currentKey, combo:[...currentSelected], timestamp:Date.now()});
+  localStorage.setItem("cart",JSON.stringify(cart));
+  showToast("已加入購物車");
+  updateCartCount();
   document.querySelectorAll("#home input[type=checkbox]").forEach(c=>c.checked=false);
   currentSelected=[];
   currentKey="";
   document.querySelectorAll(".yarn").forEach(y=>y.classList.remove("selected"));
+  cancelPreview();
 }
 
-// 高亮即時
 document.querySelectorAll(".yarn input").forEach(inp=>{
-  inp.addEventListener("change",()=>{
-    if(inp.checked) inp.closest(".yarn").classList.add("selected");
-    else inp.closest(".yarn").classList.remove("selected");
-  });
+  inp.addEventListener("change",()=>inp.checked?inp.closest(".yarn").classList.add("selected"):inp.closest(".yarn").classList.remove("selected"));
 });
 
-// 購物車
 function updateCartCount(){
   const cartData=JSON.parse(localStorage.getItem("cart")||"[]");
   document.getElementById("cartBtn").innerText=`🛒 ${cartData.length}`;
 }
+
 function showCart(){
-  document.getElementById("home").classList.replace("show","hidden");
-  document.getElementById("previewContainer").classList.replace("show","hidden");
-  document.getElementById("cart").classList.replace("hidden","show");
+  document.getElementById("home").classList.add("hidden");
+  document.getElementById("previewContainer").classList.add("hidden");
+  document.getElementById("cart").classList.remove("hidden");
   renderCart();
 }
+
 function backHome(){
-  document.getElementById("home").classList.replace("hidden","show");
-  document.getElementById("previewContainer").classList.replace("show","hidden");
-  document.getElementById("cart").classList.replace("show","hidden");
+  document.getElementById("home").classList.remove("hidden");
+  document.getElementById("previewContainer").classList.add("hidden");
+  document.getElementById("cart").classList.add("hidden");
 }
+
 function renderCart(){
   const cartData=JSON.parse(localStorage.getItem("cart")||"[]").sort((a,b)=>b.timestamp-a.timestamp);
   const cartList=document.getElementById("cartList");
@@ -299,15 +194,17 @@ function renderCart(){
     cartList.appendChild(div);
   });
 }
+
 function copyCode(text){ navigator.clipboard.writeText(text); showToast("已複製代碼："+text); }
+
 function edit(index){
   const cart=JSON.parse(localStorage.getItem("cart")||"[]");
   const item=cart[index];
   document.querySelectorAll("#home input[type=checkbox]").forEach(c=>c.checked=false);
   item.combo.forEach(v=>document.querySelector(`#home input[value="${v}"]`).checked=true);
-  cancelPreview();
-  document.getElementById("home").classList.replace("hidden","show");
+  backHome();
 }
+
 function clearCart(){
   if(confirm("確定要清空購物車嗎？")){
     localStorage.removeItem("cart");
@@ -316,6 +213,7 @@ function clearCart(){
     showToast("購物車已清空");
   }
 }
+
 function deleteSelected(){
   const cart=JSON.parse(localStorage.getItem("cart")||"[]");
   const checked=[...document.querySelectorAll("#cartList input[type=checkbox]:checked")].map(c=>parseInt(c.dataset.index));
