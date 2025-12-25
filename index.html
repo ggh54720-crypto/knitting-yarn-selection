@@ -126,6 +126,7 @@ button:hover { opacity:0.8; }
   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
     <h3>購物車</h3>
     <div>
+      <button class="secondary" onclick="backHome()">回首頁</button>
       <button class="secondary" onclick="clearCart()">清空購物車</button>
       <button class="secondary" onclick="deleteSelected()">刪除選取</button>
     </div>
@@ -183,7 +184,6 @@ function cancelPreview(){
   const preview = document.getElementById("previewContainer");
   preview.classList.remove("show");
   setTimeout(()=>preview.classList.add("hidden"),400);
-  // 勾選保留，無需清空
   currentSelected = [...savedSelection];
 }
 
@@ -203,7 +203,6 @@ function addToCart(){
     showToast("已加入購物車");
   }else showToast("此配色已在購物車中");
 
-  // 隱藏預覽
   const preview = document.getElementById("previewContainer");
   preview.classList.remove("show");
   setTimeout(()=>preview.classList.add("hidden"),400);
@@ -220,6 +219,13 @@ function showCart(){
   document.getElementById("previewContainer").classList.replace("show","hidden");
   document.getElementById("cart").classList.replace("hidden","show");
   renderCart();
+}
+
+// 回首頁
+function backHome(){
+  document.getElementById("home").classList.replace("hidden","show");
+  document.getElementById("previewContainer").classList.replace("show","hidden");
+  document.getElementById("cart").classList.replace("show","hidden");
 }
 
 // 渲染購物車
