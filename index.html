@@ -1,269 +1,53 @@
-<!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>手混線配色</title>
+function showPreview() {
+  const selected = [...document.querySelectorAll("#home input:checked")]
+    .map(i => i.value)
+    .sort();
+  if (!selected.length) { showToast("請至少選一種線材"); return; }
 
-<style>
-body { font-family:sans-serif; background:#f5f1ea; padding:16px; }
-.app { max-width:800px; width:100%; margin:auto; background:#fff; border-radius:20px; padding:16px; transition: all 0.3s ease; }
-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+  currentSelected = [...selected];
+  savedSelection = [...selected];
+  currentKey = "MIX-" + selected.join("-");
 
-.yarns { display:grid; grid-template-columns:repeat(auto-fit, minmax(100px,1fr)); gap:12px; margin-top:12px; }
-.yarn { border:2px solid #eee; border-radius:12px; padding:6px; text-align:center; transition: transform 0.2s; }
-.yarn:hover { transform: scale(1.05); }
-.yarn img { width:100%; border-radius:8px; }
+  const slider = document.getElementById("previewSlider");
+  slider.innerHTML = "";
 
-button { padding:10px 14px; border-radius:12px; border:none; font-size:16px; cursor:pointer; transition: all 0.2s; }
-button:hover { opacity:0.8; }
-.primary { background:#ff8f66; color:#fff; }
-.secondary { background:#444; color:#fff; }
+  // 假設只顯示一個組合，也可以擴展為多組組合
+  const img = document.createElement("img");
+  img.src = `images/mix/${selected.join("-")}.jpg`;
+  img.onerror = () => { img.src="images/placeholder.jpg"; showToast("該混線圖片不存在"); };
+  img.classList.add("selected");
+  slider.appendChild(img);
 
-.hidden { display:none; opacity:0; transition: opacity 0.3s; }
-.show { display:block; opacity:1; transition: opacity 0.3s; }
+  document.getElementById("mixInfo").innerText = currentKey;
 
-.card { border:1px solid #ddd; border-radius:14px; padding:10px; margin-bottom:12px; transition: all 0.3s; }
-.card img { width:100%; border-radius:10px; }
-
-.row { display:flex; align-items:center; gap:6px; }
-.row strong { flex:1; }
-
-/* toast 提示 */
-#toast {
-  position: fixed;
-  bottom: 30px;
-  left: 50%;
-  transform: translateX(-50%);
-  background:#444;
-  color:#fff;
-  padding:12px 20px;
-  border-radius:12px;
-  opacity:0;
-  transition: opacity 0.5s;
-  z-index:1000;
-}
-
-/* 下方預覽區 */
-#previewContainer { margin-top:20px; border-top:1px solid #ddd; padding-top:12px; text-align:center; }
-#previewContainer img {
-  width:auto;          /* 自動寬度 */
-  max-width:250px;     /* 最大寬度 */
-  max-height:200px;    /* 最大高度 */
-  border-radius:12px;
-  margin-bottom:8px;
-  display:block;
-  margin-left:auto;
-  margin-right:auto;
-}
-
-@media (min-width:600px){
-  .yarns { grid-template-columns:repeat(3,1fr); }
-}
-</style>
-</head>
-
-<body>
-<div class="app">
-
-<header>
-  <h3>🧶 手混線</h3>
-  <button type="button" id="cartBtn" onclick="showCart()">🛒 0</button>
-</header>
-
-<!-- 首頁線材選擇 -->
-<div id="home" class="show">
-  <input id="search" placeholder="搜尋線材或顏色"
-    oninput="filterYarns()"
-    style="width:100%;padding:10px;border-radius:10px;border:1px solid #ddd;">
-
-  <div class="yarns">
-    <label class="yarn" data-name="奶茶燕麥" data-color="beige">
-      <input type="checkbox" value="A">
-      <img src="images/A.jpg">
-      <div>奶茶燕麥</div>
-    </label>
-
-    <label class="yarn" data-name="霧藍海鹽" data-color="blue">
-      <input type="checkbox" value="B">
-      <img src="images/B.jpg">
-      <div>霧藍海鹽</div>
-    </label>
-
-    <label class="yarn" data-name="森林橄欖" data-color="green">
-      <input type="checkbox" value="C">
-      <img src="images/C.jpg">
-      <div>森林橄欖</div>
-    </label>
-  </div>
-
-  <button type="button" class="primary" onclick="showPreview()">產生混線預覽</button>
-</div>
-
-<!-- 下方預覽區 -->
-<div id="previewContainer" class="hidden">
-  <img id="mixImg">
-  <p id="mixInfo"></p>
-  <div style="display:flex; gap:8px; justify-content:center;">
-    <button type="button" class="primary" onclick="addToCart()">加入購物車</button>
-    <button type="button" class="secondary" onclick="cancelPreview()">取消</button>
-  </div>
-</div>
-
-<!-- 購物車 -->
-<div id="cart" class="hidden">
-  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-    <h3>購物車</h3>
-    <div>
-      <button class="secondary" onclick="clearCart()">清空購物車</button>
-      <button class="secondary" onclick="deleteSelected()">刪除選取</button>
-    </div>
-  </div>
-  <div id="cartList"></div>
-</div>
-
-<!-- toast 提示 -->
-<div id="toast"></div>
-
-</div>
-
-<script>
-let currentKey = "";
-let currentSelected = [];
-
-// toast 提示
-function showToast(msg){
-  const t = document.getElementById("toast");
-  t.innerText = msg;
-  t.classList.add("show");
-  setTimeout(()=>t.classList.remove("show"),1500);
-}
-
-// 搜尋過濾
-function filterYarns() {
-  const k = search.value.toLowerCase();
-  document.querySelectorAll(".yarn").forEach(y => {
-    const name = y.dataset.name.toLowerCase();
-    const color = y.dataset.color.toLowerCase();
-    y.style.display = (name.includes(k) || color.includes(k)) ? "block" : "none";
+  // 高亮選中線材
+  document.querySelectorAll(".yarn").forEach(y=>{
+    const input = y.querySelector("input");
+    if(input.checked) y.classList.add("selected");
+    else y.classList.remove("selected");
   });
+
+  const preview = document.getElementById("previewContainer");
+  preview.classList.remove("hidden");
+  setTimeout(()=>preview.classList.add("show"),50);
 }
 
-// 顯示下方預覽
-function showPreview(){
-  const selected = [...document.querySelectorAll("#home input:checked")].map(i=>i.value).sort();
-  if(!selected.length){ showToast("請至少選一種線材"); return; }
-  currentSelected = selected;
-  currentKey = "MIX-"+selected.join("-");
-  const mixImg = document.getElementById("mixImg");
-  mixImg.src=`images/mix/${selected.join("-")}.jpg`;
-  mixImg.onerror=()=>{ mixImg.src="images/placeholder.jpg"; };
-  document.getElementById("mixInfo").innerText=currentKey;
-  document.getElementById("previewContainer").classList.replace("hidden","show");
-}
-
-// 取消預覽
+// 取消預覽時移除高亮
 function cancelPreview(){
-  document.getElementById("previewContainer").classList.replace("show","hidden");
-}
+  const preview = document.getElementById("previewContainer");
+  preview.classList.remove("show");
+  preview.addEventListener('transitionend',()=>{ preview.classList.add("hidden"); }, {once:true});
+  currentSelected = [...savedSelection];
 
-// 購物車數量
-function updateCartCount(){
-  const cartData = JSON.parse(localStorage.getItem("cart")||"[]");
-  document.getElementById("cartBtn").innerText=`🛒 ${cartData.length}`;
-}
-
-// 加入購物車
-function addToCart(){
-  const cart = JSON.parse(localStorage.getItem("cart")||"[]");
-
-  if(!cart.some(item=>item.key===currentKey)){
-    cart.push({ key:currentKey, combo:currentSelected, timestamp:Date.now() });
-    localStorage.setItem("cart",JSON.stringify(cart));
-    updateCartCount();
-    showToast("已加入購物車");
-  }else{
-    showToast("此配色已在購物車中");
-  }
-
-  // 隱藏預覽區
-  cancelPreview();
-
-  // 清空首頁勾選
-  document.querySelectorAll("#home input[type=checkbox]").forEach(c=>c.checked=false);
-
-  // 清空當前選擇記錄
-  currentSelected = [];
-  currentKey = "";
-}
-
-// 顯示購物車
-function showCart(){
-  document.getElementById("home").classList.replace("show","hidden");
-  document.getElementById("previewContainer").classList.replace("show","hidden");
-  document.getElementById("cart").classList.replace("hidden","show");
-  renderCart();
-}
-
-// 渲染購物車列表
-function renderCart(){
-  const cartData = JSON.parse(localStorage.getItem("cart")||"[]").sort((a,b)=>b.timestamp-a.timestamp);
-  const cartList = document.getElementById("cartList");
-  cartList.innerHTML="";
-  cartData.forEach((item,i)=>{
-    const div=document.createElement("div");
-    div.className="card";
-    div.innerHTML=`
-      <div class="row">
-        <input type="checkbox" data-index="${i}">
-        <strong>${item.key}</strong>
-        <button type="button" onclick="copyCode('${item.key}')">📋</button>
-      </div>
-      <img src="images/mix/${item.combo.join("-")}.jpg" onerror="this.src='images/placeholder.jpg'">
-      <button type="button" onclick="edit(${i})">修改配色</button>
-    `;
-    cartList.appendChild(div);
+  document.querySelectorAll(".yarn").forEach(y=>{
+    y.classList.remove("selected");
   });
 }
 
-// 複製代碼
-function copyCode(text){ navigator.clipboard.writeText(text); showToast("已複製代碼："+text); }
-
-// 編輯配色
-function edit(index){
-  const cart = JSON.parse(localStorage.getItem("cart")||"[]");
-  const item = cart[index];
-  document.querySelectorAll("#home input[type=checkbox]").forEach(c=>c.checked=false);
-  item.combo.forEach(v=>document.querySelector(`#home input[value="${v}"]`).checked=true);
-  cancelPreview();
-  document.getElementById("home").classList.replace("hidden","show");
-}
-
-// 清空購物車
-function clearCart(){
-  if(confirm("確定要清空購物車嗎？")){
-    localStorage.removeItem("cart");
-    renderCart();
-    updateCartCount();
-    showToast("購物車已清空");
-  }
-}
-
-// 批量刪除
-function deleteSelected(){
-  const cart = JSON.parse(localStorage.getItem("cart")||"[]");
-  const checked = [...document.querySelectorAll("#cartList input[type=checkbox]:checked")].map(c=>parseInt(c.dataset.index));
-  if(!checked.length){ showToast("請選擇要刪除的項目"); return; }
-  const newCart = cart.filter((_,i)=>!checked.includes(i));
-  localStorage.setItem("cart",JSON.stringify(newCart));
-  renderCart();
-  updateCartCount();
-  showToast("已刪除選取項目");
-}
-
-// 初始化購物車數量
-updateCartCount();
-</script>
-
-</body>
-</html>
+// 當首頁勾選變化時即時高亮
+document.querySelectorAll(".yarn input").forEach(inp=>{
+  inp.addEventListener("change",()=>{
+    if(inp.checked) inp.closest(".yarn").classList.add("selected");
+    else inp.closest(".yarn").classList.remove("selected");
+  });
+});
