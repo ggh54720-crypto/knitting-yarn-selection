@@ -8,7 +8,7 @@
 <style>
 body { font-family:sans-serif; background:#f5f1ea; padding:16px; }
 .app { max-width:800px; width:100%; margin:auto; background:#fff; border-radius:20px; padding:16px; transition: all 0.3s ease; }
-header { display:flex; justify-content:space-between; align-items:center; }
+header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
 
 .yarns { display:grid; grid-template-columns:repeat(auto-fit, minmax(100px,1fr)); gap:12px; margin-top:12px; }
 .yarn { border:2px solid #eee; border-radius:12px; padding:6px; text-align:center; transition: transform 0.2s; }
@@ -21,7 +21,7 @@ button:hover { opacity:0.8; }
 .secondary { background:#444; color:#fff; }
 
 .hidden { display:none; opacity:0; transition: opacity 0.3s; }
-.show { display:block; opacity:1; }
+.show { display:block; opacity:1; transition: opacity 0.3s; }
 
 .card { border:1px solid #ddd; border-radius:14px; padding:10px; margin-bottom:12px; transition: all 0.3s; }
 .card img { width:100%; border-radius:10px; }
@@ -45,6 +45,10 @@ button:hover { opacity:0.8; }
 }
 #toast.show { opacity:1; }
 
+/* 下方預覽區 */
+#previewContainer { margin-top:20px; border-top:1px solid #ddd; padding-top:12px; }
+#previewContainer img { width:100%; border-radius:12px; margin-bottom:8px; }
+
 @media (min-width:600px){
   .yarns { grid-template-columns:repeat(3,1fr); }
 }
@@ -59,8 +63,8 @@ button:hover { opacity:0.8; }
   <button type="button" id="cartBtn" onclick="showCart()">🛒 0</button>
 </header>
 
-<!-- 首頁 -->
-<div id="home" class="show">
+<!-- 首頁線材選擇 -->
+<div id="home">
   <input id="search" placeholder="搜尋線材或顏色"
     oninput="filterYarns()"
     style="width:100%;padding:10px;border-radius:10px;border:1px solid #ddd;">
@@ -85,16 +89,17 @@ button:hover { opacity:0.8; }
     </label>
   </div>
 
-  <button type="button" class="primary" onclick="makePreview()">產生混線預覽</button>
+  <button type="button" class="primary" onclick="showPreview()">產生混線預覽</button>
 </div>
 
-<!-- 預覽 -->
-<div id="preview" class="hidden">
-  <img id="mixImg" style="width:100%; border-radius:12px;">
+<!-- 下方預覽區 -->
+<div id="previewContainer" class="hidden">
+  <img id="mixImg">
   <p id="mixInfo"></p>
-
-  <button type="button" class="primary" onclick="addToCart()">加入購物車</button>
-  <button type="button" class="secondary" onclick="backHome()">回首頁</button>
+  <div style="display:flex; gap:8px;">
+    <button type="button" class="primary" onclick="addToCart()">加入購物車</button>
+    <button type="button" class="secondary" onclick="cancelPreview()">取消</button>
+  </div>
 </div>
 
 <!-- 購物車 -->
@@ -136,24 +141,22 @@ function filterYarns() {
   });
 }
 
-// 預覽
-function makePreview() {
+// 顯示下方預覽
+function showPreview(){
   const selected = [...document.querySelectorAll("#home input:checked")].map(i=>i.value).sort();
   if(!selected.length){ showToast("請至少選一種線材"); return; }
   currentSelected = selected;
   currentKey = "MIX-"+selected.join("-");
+  const mixImg = document.getElementById("mixImg");
   mixImg.src=`images/mix/${selected.join("-")}.jpg`;
   mixImg.onerror=()=>{ mixImg.src="images/placeholder.jpg"; };
-  mixInfo.innerText=currentKey;
-  home.classList.replace("show","hidden");
-  preview.classList.replace("hidden","show");
+  document.getElementById("mixInfo").innerText=currentKey;
+  document.getElementById("previewContainer").classList.replace("hidden","show");
 }
 
-// 回首頁
-function backHome(){
-  preview.classList.replace("show","hidden");
-  cart.classList.replace("show","hidden");
-  home.classList.replace("hidden","show");
+// 取消預覽
+function cancelPreview(){
+  document.getElementById("previewContainer").classList.replace("show","hidden");
 }
 
 // 購物車數量
@@ -171,13 +174,14 @@ function addToCart(){
     updateCartCount();
     showToast("已加入購物車");
   }else showToast("此配色已在購物車中");
+  cancelPreview();
 }
 
 // 顯示購物車
 function showCart(){
-  home.classList.replace("show","hidden");
-  preview.classList.replace("show","hidden");
-  cart.classList.replace("hidden","show");
+  document.getElementById("home").classList.replace("show","hidden");
+  document.getElementById("previewContainer").classList.replace("show","hidden");
+  document.getElementById("cart").classList.replace("hidden","show");
   renderCart();
 }
 
@@ -211,7 +215,8 @@ function edit(index){
   const item = cart[index];
   document.querySelectorAll("#home input[type=checkbox]").forEach(c=>c.checked=false);
   item.combo.forEach(v=>document.querySelector(`#home input[value="${v}"]`).checked=true);
-  backHome();
+  cancelPreview();
+  document.getElementById("home").classList.replace("hidden","show");
 }
 
 // 清空購物車
