@@ -20,8 +20,8 @@ button:hover { opacity:0.8; }
 .primary { background:#ff8f66; color:#fff; }
 .secondary { background:#444; color:#fff; }
 
-.hidden { display:none; opacity:0; transition: opacity 0.3s; }
-.show { display:block; opacity:1; transition: opacity 0.3s; }
+.hidden { display:none; }
+.show { display:block; }
 
 .card { border:1px solid #ddd; border-radius:14px; padding:10px; margin-bottom:12px; transition: all 0.3s; }
 .card img { width:100%; border-radius:10px; }
@@ -44,9 +44,31 @@ button:hover { opacity:0.8; }
   z-index:1000;
 }
 
-/* 下方預覽區 */
-#previewContainer { margin-top:20px; border-top:1px solid #ddd; padding-top:12px; }
-#previewContainer img { width:100%; border-radius:12px; margin-bottom:8px; }
+/* 下方預覽區 + 滑入動畫 */
+#previewContainer {
+  margin-top:20px;
+  border-top:1px solid #ddd;
+  padding-top:12px;
+  text-align:center;
+  transform: translateY(20px);
+  opacity: 0;
+  transition: transform 0.4s ease, opacity 0.4s ease;
+}
+#previewContainer.show {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+#previewContainer img {
+  width:auto;
+  max-width:250px;
+  max-height:200px;
+  border-radius:12px;
+  margin-bottom:8px;
+  display:block;
+  margin-left:auto;
+  margin-right:auto;
+}
 
 @media (min-width:600px){
   .yarns { grid-template-columns:repeat(3,1fr); }
@@ -62,7 +84,6 @@ button:hover { opacity:0.8; }
   <button type="button" id="cartBtn" onclick="showCart()">🛒 0</button>
 </header>
 
-<!-- 首頁線材選擇 -->
 <div id="home" class="show">
   <input id="search" placeholder="搜尋線材或顏色"
     oninput="filterYarns()"
@@ -95,13 +116,12 @@ button:hover { opacity:0.8; }
 <div id="previewContainer" class="hidden">
   <img id="mixImg">
   <p id="mixInfo"></p>
-  <div style="display:flex; gap:8px;">
+  <div style="display:flex; gap:8px; justify-content:center;">
     <button type="button" class="primary" onclick="addToCart()">加入購物車</button>
     <button type="button" class="secondary" onclick="cancelPreview()">取消</button>
   </div>
 </div>
 
-<!-- 購物車 -->
 <div id="cart" class="hidden">
   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
     <h3>購物車</h3>
@@ -113,7 +133,6 @@ button:hover { opacity:0.8; }
   <div id="cartList"></div>
 </div>
 
-<!-- toast 提示 -->
 <div id="toast"></div>
 
 </div>
@@ -126,8 +145,9 @@ let currentSelected = [];
 function showToast(msg){
   const t = document.getElementById("toast");
   t.innerText = msg;
+  t.style.opacity=1;
   t.classList.add("show");
-  setTimeout(()=>t.classList.remove("show"),1500);
+  setTimeout(()=>t.style.opacity=0,1500);
 }
 
 // 搜尋過濾
@@ -150,12 +170,17 @@ function showPreview(){
   mixImg.src=`images/mix/${selected.join("-")}.jpg`;
   mixImg.onerror=()=>{ mixImg.src="images/placeholder.jpg"; };
   document.getElementById("mixInfo").innerText=currentKey;
-  document.getElementById("previewContainer").classList.replace("hidden","show");
+
+  const preview = document.getElementById("previewContainer");
+  preview.classList.remove("hidden");
+  setTimeout(()=>preview.classList.add("show"),50); // 觸發動畫
 }
 
 // 取消預覽
 function cancelPreview(){
-  document.getElementById("previewContainer").classList.replace("show","hidden");
+  const preview = document.getElementById("previewContainer");
+  preview.classList.remove("show");
+  setTimeout(()=>preview.classList.add("hidden"),400); // 等動畫完成
 }
 
 // 購物車數量
@@ -167,23 +192,16 @@ function updateCartCount(){
 // 加入購物車
 function addToCart(){
   const cart = JSON.parse(localStorage.getItem("cart")||"[]");
-
   if(!cart.some(item=>item.key===currentKey)){
     cart.push({ key:currentKey, combo:currentSelected, timestamp:Date.now() });
     localStorage.setItem("cart",JSON.stringify(cart));
     updateCartCount();
     showToast("已加入購物車");
-  }else{
-    showToast("此配色已在購物車中");
-  }
+  }else showToast("此配色已在購物車中");
 
-  // 隱藏預覽區
   cancelPreview();
 
-  // 清空首頁勾選
   document.querySelectorAll("#home input[type=checkbox]").forEach(c=>c.checked=false);
-
-  // 清空當前選擇記錄
   currentSelected = [];
   currentKey = "";
 }
@@ -196,7 +214,7 @@ function showCart(){
   renderCart();
 }
 
-// 渲染購物車列表
+// 渲染購物車
 function renderCart(){
   const cartData = JSON.parse(localStorage.getItem("cart")||"[]").sort((a,b)=>b.timestamp-a.timestamp);
   const cartList = document.getElementById("cartList");
@@ -220,7 +238,7 @@ function renderCart(){
 // 複製代碼
 function copyCode(text){ navigator.clipboard.writeText(text); showToast("已複製代碼："+text); }
 
-// 編輯配色
+// 編輯
 function edit(index){
   const cart = JSON.parse(localStorage.getItem("cart")||"[]");
   const item = cart[index];
@@ -252,7 +270,6 @@ function deleteSelected(){
   showToast("已刪除選取項目");
 }
 
-// 初始化購物車數量
 updateCartCount();
 </script>
 
