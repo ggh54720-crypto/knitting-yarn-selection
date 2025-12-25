@@ -140,6 +140,7 @@ button:hover { opacity:0.8; }
 <script>
 let currentKey = "";
 let currentSelected = [];
+let savedSelection = []; // 暫存勾選
 
 // toast 提示
 function showToast(msg){
@@ -166,6 +167,7 @@ function showPreview(){
   if(!selected.length){ showToast("請至少選一種線材"); return; }
   currentSelected = selected;
   currentKey = "MIX-"+selected.join("-");
+  savedSelection = [...selected]; // 暫存勾選
   const mixImg = document.getElementById("mixImg");
   mixImg.src=`images/mix/${selected.join("-")}.jpg`;
   mixImg.onerror=()=>{ mixImg.src="images/placeholder.jpg"; };
@@ -176,11 +178,13 @@ function showPreview(){
   setTimeout(()=>preview.classList.add("show"),50); // 觸發動畫
 }
 
-// 取消預覽
+// 取消預覽（保留勾選）
 function cancelPreview(){
   const preview = document.getElementById("previewContainer");
   preview.classList.remove("show");
-  setTimeout(()=>preview.classList.add("hidden"),400); // 等動畫完成
+  setTimeout(()=>preview.classList.add("hidden"),400);
+  // 勾選保留，無需清空
+  currentSelected = [...savedSelection];
 }
 
 // 購物車數量
@@ -199,8 +203,12 @@ function addToCart(){
     showToast("已加入購物車");
   }else showToast("此配色已在購物車中");
 
-  cancelPreview();
+  // 隱藏預覽
+  const preview = document.getElementById("previewContainer");
+  preview.classList.remove("show");
+  setTimeout(()=>preview.classList.add("hidden"),400);
 
+  // 加入購物車後清空首頁勾選
   document.querySelectorAll("#home input[type=checkbox]").forEach(c=>c.checked=false);
   currentSelected = [];
   currentKey = "";
