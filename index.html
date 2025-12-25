@@ -35,19 +35,41 @@ button:hover { opacity:0.8; }
 .primary { background:#ff8f66; color:#fff; }
 .secondary { background:#444; color:#fff; }
 
+/* 預覽容器 */
 #previewContainer {
   margin-top:20px;
-  border-top:1px solid #ddd;
-  padding-top:12px;
   text-align:center;
-  opacity:0;
-  transform: translateY(20px);
-  transition: all 0.3s;
-  display:none;
 }
-#previewContainer.show { opacity:1; transform: translateY(0); display:block; }
 
-#previewContainer img { width:80px; height:80px; border-radius:8px; margin:0 4px; }
+/* 下層固定主圖 */
+#mainPreview {
+  width:200px;
+  height:200px;
+  margin:auto;
+  border:1px solid #ddd;
+  border-radius:12px;
+  overflow:hidden;
+  margin-bottom:10px;
+}
+#mainPreview img { width:100%; height:100%; object-fit:cover; }
+
+/* 上層滑動縮圖 */
+#thumbnailSlider {
+  display:flex;
+  overflow-x:auto;
+  gap:6px;
+  padding:6px 0;
+}
+#thumbnailSlider img {
+  width:60px;
+  height:60px;
+  border-radius:8px;
+  cursor:pointer;
+  flex-shrink:0;
+  border:2px solid transparent;
+  transition: all 0.2s;
+}
+#thumbnailSlider img.selected { border-color:#ff8f66; }
 
 #toast {
   position: fixed;
@@ -122,10 +144,17 @@ button:hover { opacity:0.8; }
 </div>
 
 <div id="previewContainer">
-  <p id="mixInfo">混線預覽</p>
-  <div id="previewSlider"></div>
+  <!-- 下層固定主圖 -->
+  <div id="mainPreview">
+    <img id="mainImage" src="images/placeholder.jpg" alt="混線預覽">
+  </div>
+
+  <!-- 上層滑動縮圖 -->
+  <div id="thumbnailSlider">
+    <!-- 勾選的 yarn 縮圖會動態生成 -->
+  </div>
+
   <button type="button" class="primary" onclick="addToCart()">加入購物車</button>
-  <button type="button" class="secondary" onclick="cancelPreview()">取消預覽</button>
 </div>
 
 <div id="toast"></div>
@@ -133,19 +162,16 @@ button:hover { opacity:0.8; }
 
 <script>
 let selectionOrder = [];
-let currentSelected = [];
-let savedSelection = [];
-let currentKey = "";
 
-// Toast 提示
+// Toast
 function showToast(msg){
-  const t=document.getElementById("toast");
-  t.innerText=msg;
-  t.style.opacity=1;
-  setTimeout(()=>t.style.opacity=0,1500);
+  const t = document.getElementById("toast");
+  t.innerText = msg;
+  t.style.opacity = 1;
+  setTimeout(()=> t.style.opacity=0, 1500);
 }
 
-// 搜尋過濾
+// 搜尋
 function filterYarns(){
   const k = document.getElementById("search").value.toLowerCase() || "";
   document.querySelectorAll(".yarn").forEach(y=>{
@@ -156,82 +182,78 @@ function filterYarns(){
 // 勾選邏輯
 document.querySelectorAll(".yarn input").forEach(inp=>{
   inp.addEventListener("change", ()=>{
-    const parent = inp.closest(".yarn");
-    const numberBox = parent.querySelector(".number-box");
-
-    if(inp.checked){
-      if(selectionOrder.length>=6){
-        inp.checked=false;
-        showToast("最多只能選6組線材");
-        return;
-      }
-      selectionOrder.push(inp.value);
-      numberBox.innerText = selectionOrder.indexOf(inp.value)+1;
-      numberBox.style.display="block";
-      parent.classList.add("selected");
-    } else {
-      const idx = selectionOrder.indexOf(inp.value);
-      if(idx>-1) selectionOrder.splice(idx,1);
-      numberBox.style.display="none";
-      parent.classList.remove("selected");
-      // 重新排列其他選項編號
-      document.querySelectorAll(".yarn input:checked").forEach(i=>{
-        const box = i.closest(".yarn").querySelector(".number-box");
-        box.innerText = selectionOrder.indexOf(i.value)+1;
-      });
+    if(inp.checked && selectionOrder.length>=6){
+      inp.checked=false;
+      showToast("最多只能選6組線材");
+      return;
     }
+    const idx = selectionOrder.indexOf(inp.value);
+    if(inp.checked && idx===-1){
+      selectionOrder.push(inp.value);
+    } else if(!inp.checked && idx>-1){
+      selectionOrder.splice(idx,1);
+    }
+    updateNumberBoxes();
     updatePreview();
   });
 });
 
-// 更新下方混線預覽
-function updatePreview(){
-  const preview=document.getElementById("previewSlider");
-  preview.innerHTML="";
-  if(selectionOrder.length===0) return;
-  selectionOrder.forEach(v=>{
-    const img=document.createElement("img");
-    img.src=`images/${v}.jpg`;
-    img.alt = v;
-    img.onerror=()=>img.src="images/placeholder.jpg";
-    preview.appendChild(img);
-  });
-  currentKey = "MIX-" + selectionOrder.join("-");
-  document.getElementById("mixInfo").innerText = currentKey;
-
-  const previewContainer = document.getElementById("previewContainer");
-  previewContainer.style.display="block";
-  setTimeout(()=>previewContainer.classList.add("show"),50);
-}
-
-// 取消預覽
-function cancelPreview(){
-  const preview = document.getElementById("previewContainer");
-  preview.classList.remove("show");
-  preview.addEventListener('transitionend', e=>{
-    if(e.target===preview) preview.style.display="none";
-  }, {once:true});
-
-  // 恢復選擇狀態
-  selectionOrder = [...savedSelection];
+// 更新 number-box
+function updateNumberBoxes(){
   document.querySelectorAll(".yarn input").forEach(i=>{
-    i.checked = selectionOrder.includes(i.value);
-    i.closest(".yarn").classList.toggle("selected", i.checked);
-    const box = i.closest(".yarn").querySelector(".number-box");
+    const parent = i.closest(".yarn");
+    const box = parent.querySelector(".number-box");
     if(i.checked){
       box.style.display="block";
       box.innerText = selectionOrder.indexOf(i.value)+1;
+      parent.classList.add("selected");
     } else {
       box.style.display="none";
+      parent.classList.remove("selected");
     }
+  });
+}
+
+// 更新預覽
+function updatePreview(){
+  const mainImg = document.getElementById("mainImage");
+  const slider = document.getElementById("thumbnailSlider");
+  slider.innerHTML = "";
+
+  if(selectionOrder.length === 0){
+    mainImg.src = "images/placeholder.jpg";
+    return;
+  }
+
+  // 下層固定主圖：顯示第一個選中
+  mainImg.src = `images/${selectionOrder[0]}.jpg`;
+  mainImg.onerror = () => mainImg.src = "images/placeholder.jpg";
+
+  // 上層滑動縮圖
+  selectionOrder.forEach(v=>{
+    const img = document.createElement("img");
+    img.src = `images/${v}.jpg`;
+    img.alt = v;
+    img.classList.add("selected");
+    img.onerror = () => img.src="images/placeholder.jpg";
+    img.addEventListener("click", ()=>{
+      const idx = selectionOrder.indexOf(v);
+      if(idx>-1){
+        selectionOrder.splice(idx,1);
+        document.querySelector(`.yarn input[value="${v}"]`).checked=false;
+        updateNumberBoxes();
+        updatePreview();
+      }
+    });
+    slider.appendChild(img);
   });
 }
 
 // 加入購物車
 function addToCart(){
   if(selectionOrder.length===0){ showToast("請先選擇線材"); return; }
-  const cart=JSON.parse(localStorage.getItem("cart")||"[]");
-  const key="MIX-"+selectionOrder.join("-");
+  const cart = JSON.parse(localStorage.getItem("cart")||"[]");
+  const key = "MIX-" + selectionOrder.join("-");
   if(!cart.some(item=>item.key===key)){
     cart.push({key:key, combo:[...selectionOrder], timestamp:Date.now()});
   }
@@ -242,15 +264,14 @@ function addToCart(){
   // 清空選擇
   selectionOrder=[];
   document.querySelectorAll(".yarn input").forEach(i=>i.checked=false);
-  document.querySelectorAll(".number-box").forEach(b=>b.style.display="none");
-  document.querySelectorAll(".yarn").forEach(y=>y.classList.remove("selected"));
+  updateNumberBoxes();
   updatePreview();
 }
 
 // 更新購物車數量
 function updateCartCount(){
-  const cartData=JSON.parse(localStorage.getItem("cart")||"[]");
-  document.getElementById("cartBtn").innerText=`🛒 ${cartData.length}`;
+  const cartData = JSON.parse(localStorage.getItem("cart")||"[]");
+  document.getElementById("cartBtn").innerText = `🛒 ${cartData.length}`;
 }
 
 updateCartCount();
