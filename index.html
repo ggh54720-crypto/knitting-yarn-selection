@@ -14,7 +14,7 @@ header { display:flex; justify-content:space-between; align-items:center; }
 .yarn { border:2px solid #eee; border-radius:12px; padding:6px; text-align:center; }
 .yarn img { width:100%; border-radius:8px; }
 
-button { width:100%; padding:14px; border-radius:12px; border:none; margin-top:12px; font-size:16px; }
+button { width:100%; padding:14px; border-radius:12px; border:none; margin-top:12px; font-size:16px; cursor:pointer; }
 .primary { background:#ff8f66; color:#fff; }
 .secondary { background:#444; color:#fff; }
 
@@ -33,7 +33,7 @@ button { width:100%; padding:14px; border-radius:12px; border:none; margin-top:1
 
 <header>
   <h3>🧶 手混線</h3>
-  <button type="button" onclick="showCart()">🛒</button>
+  <button type="button" id="cartBtn" onclick="showCart()">🛒 0</button>
 </header>
 
 <!-- 首頁 -->
@@ -69,7 +69,7 @@ button { width:100%; padding:14px; border-radius:12px; border:none; margin-top:1
 
 <!-- 預覽 -->
 <div id="preview" class="hidden">
-  <img id="mixImg">
+  <img id="mixImg" style="width:100%; border-radius:12px;">
   <p id="mixInfo"></p>
 
   <button type="button" class="primary" onclick="addToCart()">加入購物車</button>
@@ -80,7 +80,6 @@ button { width:100%; padding:14px; border-radius:12px; border:none; margin-top:1
 <div id="cart" class="hidden">
   <h3>購物車</h3>
   <div id="cartList"></div>
-  <button type="button" class="secondary" onclick="backHome()">回首頁</button>
 </div>
 
 </div>
@@ -89,6 +88,7 @@ button { width:100%; padding:14px; border-radius:12px; border:none; margin-top:1
 let currentKey = "";
 let currentSelected = [];
 
+// 搜尋過濾
 function filterYarns() {
   const k = search.value.toLowerCase();
   document.querySelectorAll(".yarn").forEach(y => {
@@ -96,6 +96,7 @@ function filterYarns() {
   });
 }
 
+// 產生混線預覽
 function makePreview() {
   const selected = [...document.querySelectorAll("input:checked")]
     .map(i => i.value)
@@ -110,28 +111,42 @@ function makePreview() {
   currentKey = "MIX-" + selected.join("-");
 
   mixImg.src = `images/mix/${selected.join("-")}.jpg`;
+  mixImg.onerror = () => { mixImg.src = "images/placeholder.jpg"; };
   mixInfo.innerText = currentKey;
 
   home.classList.add("hidden");
   preview.classList.remove("hidden");
 }
 
+// 回首頁
 function backHome() {
   preview.classList.add("hidden");
   cart.classList.add("hidden");
   home.classList.remove("hidden");
 }
 
-function addToCart() {
-  const cart = JSON.parse(localStorage.getItem("cart") || "[]");
-  cart.push({
-    key: currentKey,
-    combo: currentSelected
-  });
-  localStorage.setItem("cart", JSON.stringify(cart));
-  alert("已加入購物車");
+// 更新購物車數量
+function updateCartCount() {
+  const cartData = JSON.parse(localStorage.getItem("cart") || "[]");
+  document.getElementById("cartBtn").innerText = `🛒 ${cartData.length}`;
 }
 
+// 加入購物車
+function addToCart() {
+  const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+
+  // 避免重複加入
+  if (!cart.some(item => item.key === currentKey)) {
+    cart.push({ key: currentKey, combo: currentSelected });
+    localStorage.setItem("cart", JSON.stringify(cart));
+    updateCartCount();
+    alert("已加入購物車");
+  } else {
+    alert("此配色已在購物車中");
+  }
+}
+
+// 顯示購物車
 function showCart() {
   home.classList.add("hidden");
   preview.classList.add("hidden");
@@ -149,17 +164,33 @@ function showCart() {
         <strong>${item.key}</strong>
         <button type="button" onclick="copyCode('${item.key}')">📋</button>
       </div>
-      <img src="images/mix/${item.combo.join("-")}.jpg">
+      <img src="images/mix/${item.combo.join("-")}.jpg" onerror="this.src='images/placeholder.jpg'">
       <button type="button" onclick="edit(${i})">修改配色</button>
     `;
     cartList.appendChild(div);
   });
+
+  // 清空購物車按鈕
+  const clearBtn = document.createElement("button");
+  clearBtn.className = "secondary";
+  clearBtn.innerText = "清空購物車";
+  clearBtn.onclick = () => {
+    if (confirm("確定要清空購物車嗎？")) {
+      localStorage.removeItem("cart");
+      cartList.innerHTML = "";
+      updateCartCount();
+    }
+  };
+  cartList.appendChild(clearBtn);
 }
 
+// 複製代碼
 function copyCode(text) {
   navigator.clipboard.writeText(text);
+  alert("已複製代碼：" + text);
 }
 
+// 編輯配色
 function edit(index) {
   const cart = JSON.parse(localStorage.getItem("cart") || "[]");
   const item = cart[index];
@@ -171,6 +202,9 @@ function edit(index) {
 
   backHome();
 }
+
+// 初始化購物車數量
+updateCartCount();
 </script>
 
 </body>
