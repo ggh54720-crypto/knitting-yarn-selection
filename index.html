@@ -43,19 +43,19 @@ button { width:100%; padding:14px; border-radius:12px; border:none; margin-top:1
 
   <div class="yarns">
 
-    <label class="yarn" data-name="奶茶燕麥 暖色 米色">
+    <label class="yarn" data-name="奶茶燕麥 米色">
       <input type="checkbox" value="A">
       <img src="images/A.jpg">
       <div>奶茶燕麥</div>
     </label>
 
-    <label class="yarn" data-name="霧藍海鹽 冷色 藍">
+    <label class="yarn" data-name="霧藍海鹽 藍色">
       <input type="checkbox" value="B">
       <img src="images/B.jpg">
       <div>霧藍海鹽</div>
     </label>
 
-    <label class="yarn" data-name="森林橄欖 綠 冷色">
+    <label class="yarn" data-name="森林橄欖 綠色">
       <input type="checkbox" value="C">
       <img src="images/C.jpg">
       <div>森林橄欖</div>
@@ -85,9 +85,40 @@ button { width:100%; padding:14px; border-radius:12px; border:none; margin-top:1
 </div>
 
 <script>
+/* ===== 購物車容錯核心 ===== */
+let memoryCart = [];
+
+function storageAvailable() {
+  try {
+    const test = "__test__";
+    localStorage.setItem(test, test);
+    localStorage.removeItem(test);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function getCart() {
+  if (storageAvailable()) {
+    return JSON.parse(localStorage.getItem("cart") || "[]");
+  }
+  return memoryCart;
+}
+
+function saveCart(cart) {
+  if (storageAvailable()) {
+    localStorage.setItem("cart", JSON.stringify(cart));
+  } else {
+    memoryCart = cart;
+  }
+}
+
+/* ===== 狀態 ===== */
 let currentKey = "";
 let currentSelected = [];
 
+/* ===== 功能 ===== */
 function filterYarns() {
   const k = search.value.toLowerCase();
   document.querySelectorAll(".yarn").forEach(y => {
@@ -122,10 +153,15 @@ function backHome() {
 }
 
 function addToCart() {
-  const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+  const cart = getCart();
   cart.push({ key: currentKey, combo: [...currentSelected] });
-  localStorage.setItem("cart", JSON.stringify(cart));
-  alert("已加入購物車");
+  saveCart(cart);
+
+  if (!storageAvailable()) {
+    alert("目前瀏覽器限制，購物車僅暫存在此頁，請用 Safari / Chrome 開啟");
+  } else {
+    alert("已加入購物車");
+  }
 }
 
 function showCart() {
@@ -134,7 +170,12 @@ function showCart() {
   cart.classList.remove("hidden");
 
   cartList.innerHTML = "";
-  const cartData = JSON.parse(localStorage.getItem("cart") || "[]");
+  const cartData = getCart();
+
+  if (!cartData.length) {
+    cartList.innerHTML = "<p>購物車是空的</p>";
+    return;
+  }
 
   cartData.forEach((item, i) => {
     const div = document.createElement("div");
@@ -157,7 +198,7 @@ function copyCode(text) {
 }
 
 function edit(index) {
-  const item = JSON.parse(localStorage.getItem("cart"))[index];
+  const item = getCart()[index];
   document.querySelectorAll("input[type=checkbox]").forEach(c => c.checked = false);
   item.combo.forEach(v => {
     document.querySelector(`input[value="${v}"]`).checked = true;
