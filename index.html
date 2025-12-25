@@ -11,9 +11,8 @@ body { font-family:sans-serif; background:#f5f1ea; padding:16px; }
 header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
 
 .yarns { display:grid; grid-template-columns:repeat(auto-fit, minmax(100px,1fr)); gap:12px; margin-top:12px; }
-.yarn { border:2px solid #eee; border-radius:12px; padding:6px; text-align:center; transition: transform 0.2s, border 0.2s; }
+.yarn { border:2px solid #eee; border-radius:12px; padding:6px; text-align:center; transition: transform 0.2s; }
 .yarn:hover { transform: scale(1.05); }
-.yarn.selected { border-color:#ff8f66; }
 .yarn img { width:100%; border-radius:8px; }
 
 button { padding:10px 14px; border-radius:12px; border:none; font-size:16px; cursor:pointer; transition: all 0.2s; }
@@ -21,8 +20,8 @@ button:hover { opacity:0.8; }
 .primary { background:#ff8f66; color:#fff; }
 .secondary { background:#444; color:#fff; }
 
-.hidden { display:none; }
-.show { display:block; }
+.hidden { display:none; opacity:0; transition: opacity 0.3s; }
+.show { display:block; opacity:1; transition: opacity 0.3s; }
 
 .card { border:1px solid #ddd; border-radius:14px; padding:10px; margin-bottom:12px; transition: all 0.3s; }
 .card img { width:100%; border-radius:10px; }
@@ -45,37 +44,18 @@ button:hover { opacity:0.8; }
   z-index:1000;
 }
 
-/* 下方預覽區 + 滑入動畫 */
-#previewContainer {
-  margin-top:20px;
-  border-top:1px solid #ddd;
-  padding-top:12px;
-  text-align:center;
-  transform: translateY(20px);
-  opacity: 0;
-  transition: transform 0.4s ease, opacity 0.4s ease;
+/* 下方預覽區 */
+#previewContainer { margin-top:20px; border-top:1px solid #ddd; padding-top:12px; text-align:center; }
+#previewContainer img {
+  width:auto;          /* 自動寬度 */
+  max-width:250px;     /* 最大寬度 */
+  max-height:200px;    /* 最大高度 */
+  border-radius:12px;
+  margin-bottom:8px;
+  display:block;
+  margin-left:auto;
+  margin-right:auto;
 }
-#previewContainer.show {
-  transform: translateY(0);
-  opacity: 1;
-}
-
-/* 多縮圖滑動 */
-#previewSlider {
-  display:flex; 
-  overflow-x:auto; 
-  gap:8px; 
-  padding:8px;
-}
-#previewSlider img {
-  width:120px; 
-  height:80px; 
-  border-radius:8px; 
-  cursor:pointer; 
-  transition: transform 0.2s, border 0.2s; 
-  border:2px solid #eee;
-}
-#previewSlider img.selected { border-color:#ff8f66; transform:scale(1.05); }
 
 @media (min-width:600px){
   .yarns { grid-template-columns:repeat(3,1fr); }
@@ -91,6 +71,7 @@ button:hover { opacity:0.8; }
   <button type="button" id="cartBtn" onclick="showCart()">🛒 0</button>
 </header>
 
+<!-- 首頁線材選擇 -->
 <div id="home" class="show">
   <input id="search" placeholder="搜尋線材或顏色"
     oninput="filterYarns()"
@@ -121,19 +102,19 @@ button:hover { opacity:0.8; }
 
 <!-- 下方預覽區 -->
 <div id="previewContainer" class="hidden">
-  <div id="previewSlider"></div>
+  <img id="mixImg">
   <p id="mixInfo"></p>
-  <div style="display:flex; gap:8px; justify-content:center; margin-top:8px;">
+  <div style="display:flex; gap:8px; justify-content:center;">
     <button type="button" class="primary" onclick="addToCart()">加入購物車</button>
     <button type="button" class="secondary" onclick="cancelPreview()">取消</button>
   </div>
 </div>
 
+<!-- 購物車 -->
 <div id="cart" class="hidden">
   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
     <h3>購物車</h3>
     <div>
-      <button class="secondary" onclick="backHome()">回首頁</button>
       <button class="secondary" onclick="clearCart()">清空購物車</button>
       <button class="secondary" onclick="deleteSelected()">刪除選取</button>
     </div>
@@ -141,6 +122,7 @@ button:hover { opacity:0.8; }
   <div id="cartList"></div>
 </div>
 
+<!-- toast 提示 -->
 <div id="toast"></div>
 
 </div>
@@ -148,18 +130,16 @@ button:hover { opacity:0.8; }
 <script>
 let currentKey = "";
 let currentSelected = [];
-let savedSelection = []; 
 
-// toast
+// toast 提示
 function showToast(msg){
   const t = document.getElementById("toast");
   t.innerText = msg;
-  t.style.opacity=1;
   t.classList.add("show");
-  setTimeout(()=>t.style.opacity=0,1500);
+  setTimeout(()=>t.classList.remove("show"),1500);
 }
 
-// filter
+// 搜尋過濾
 function filterYarns() {
   const k = search.value.toLowerCase();
   document.querySelectorAll(".yarn").forEach(y => {
@@ -170,94 +150,65 @@ function filterYarns() {
 }
 
 // 顯示下方預覽
-function showPreview() {
-  const selected = [...document.querySelectorAll("#home input:checked")].map(i => i.value).sort();
+function showPreview(){
+  const selected = [...document.querySelectorAll("#home input:checked")].map(i=>i.value).sort();
   if(!selected.length){ showToast("請至少選一種線材"); return; }
-
-  currentSelected = [...selected];
-  savedSelection = [...selected];
+  currentSelected = selected;
   currentKey = "MIX-"+selected.join("-");
-
-  const slider = document.getElementById("previewSlider");
-  slider.innerHTML="";
-
-  const img = document.createElement("img");
-  img.src=`images/mix/${selected.join("-")}.jpg`;
-  img.onerror=()=>{ img.src="images/placeholder.jpg"; showToast("該混線圖片不存在"); };
-  img.classList.add("selected");
-  slider.appendChild(img);
-
+  const mixImg = document.getElementById("mixImg");
+  mixImg.src=`images/mix/${selected.join("-")}.jpg`;
+  mixImg.onerror=()=>{ mixImg.src="images/placeholder.jpg"; };
   document.getElementById("mixInfo").innerText=currentKey;
-
-  // 高亮勾選
-  document.querySelectorAll(".yarn").forEach(y=>{
-    const input = y.querySelector("input");
-    if(input.checked) y.classList.add("selected");
-    else y.classList.remove("selected");
-  });
-
-  const preview=document.getElementById("previewContainer");
-  preview.classList.remove("hidden");
-  setTimeout(()=>preview.classList.add("show"),50);
+  document.getElementById("previewContainer").classList.replace("hidden","show");
 }
 
-// 取消
+// 取消預覽
 function cancelPreview(){
-  const preview=document.getElementById("previewContainer");
-  preview.classList.remove("show");
-  preview.addEventListener('transitionend',()=>{ preview.classList.add("hidden"); }, {once:true});
-  currentSelected=[...savedSelection];
+  document.getElementById("previewContainer").classList.replace("show","hidden");
+}
 
-  document.querySelectorAll(".yarn").forEach(y=>y.classList.remove("selected"));
+// 購物車數量
+function updateCartCount(){
+  const cartData = JSON.parse(localStorage.getItem("cart")||"[]");
+  document.getElementById("cartBtn").innerText=`🛒 ${cartData.length}`;
 }
 
 // 加入購物車
 function addToCart(){
-  const cart=JSON.parse(localStorage.getItem("cart")||"[]");
+  const cart = JSON.parse(localStorage.getItem("cart")||"[]");
+
   if(!cart.some(item=>item.key===currentKey)){
-    cart.push({key:currentKey, combo:[...currentSelected], timestamp:Date.now()});
+    cart.push({ key:currentKey, combo:currentSelected, timestamp:Date.now() });
     localStorage.setItem("cart",JSON.stringify(cart));
     updateCartCount();
     showToast("已加入購物車");
-  } else showToast("此配色已在購物車中");
+  }else{
+    showToast("此配色已在購物車中");
+  }
 
-  const preview=document.getElementById("previewContainer");
-  preview.classList.remove("show");
-  preview.addEventListener('transitionend',()=>{ preview.classList.add("hidden"); }, {once:true});
+  // 隱藏預覽區
+  cancelPreview();
 
+  // 清空首頁勾選
   document.querySelectorAll("#home input[type=checkbox]").forEach(c=>c.checked=false);
-  currentSelected=[];
-  currentKey="";
-  document.querySelectorAll(".yarn").forEach(y=>y.classList.remove("selected"));
+
+  // 清空當前選擇記錄
+  currentSelected = [];
+  currentKey = "";
 }
 
-// 高亮即時
-document.querySelectorAll(".yarn input").forEach(inp=>{
-  inp.addEventListener("change",()=>{
-    if(inp.checked) inp.closest(".yarn").classList.add("selected");
-    else inp.closest(".yarn").classList.remove("selected");
-  });
-});
-
-// 購物車
-function updateCartCount(){
-  const cartData=JSON.parse(localStorage.getItem("cart")||"[]");
-  document.getElementById("cartBtn").innerText=`🛒 ${cartData.length}`;
-}
+// 顯示購物車
 function showCart(){
   document.getElementById("home").classList.replace("show","hidden");
   document.getElementById("previewContainer").classList.replace("show","hidden");
   document.getElementById("cart").classList.replace("hidden","show");
   renderCart();
 }
-function backHome(){
-  document.getElementById("home").classList.replace("hidden","show");
-  document.getElementById("previewContainer").classList.replace("show","hidden");
-  document.getElementById("cart").classList.replace("show","hidden");
-}
+
+// 渲染購物車列表
 function renderCart(){
-  const cartData=JSON.parse(localStorage.getItem("cart")||"[]").sort((a,b)=>b.timestamp-a.timestamp);
-  const cartList=document.getElementById("cartList");
+  const cartData = JSON.parse(localStorage.getItem("cart")||"[]").sort((a,b)=>b.timestamp-a.timestamp);
+  const cartList = document.getElementById("cartList");
   cartList.innerHTML="";
   cartData.forEach((item,i)=>{
     const div=document.createElement("div");
@@ -274,15 +225,21 @@ function renderCart(){
     cartList.appendChild(div);
   });
 }
+
+// 複製代碼
 function copyCode(text){ navigator.clipboard.writeText(text); showToast("已複製代碼："+text); }
+
+// 編輯配色
 function edit(index){
-  const cart=JSON.parse(localStorage.getItem("cart")||"[]");
-  const item=cart[index];
+  const cart = JSON.parse(localStorage.getItem("cart")||"[]");
+  const item = cart[index];
   document.querySelectorAll("#home input[type=checkbox]").forEach(c=>c.checked=false);
   item.combo.forEach(v=>document.querySelector(`#home input[value="${v}"]`).checked=true);
   cancelPreview();
   document.getElementById("home").classList.replace("hidden","show");
 }
+
+// 清空購物車
 function clearCart(){
   if(confirm("確定要清空購物車嗎？")){
     localStorage.removeItem("cart");
@@ -291,18 +248,22 @@ function clearCart(){
     showToast("購物車已清空");
   }
 }
+
+// 批量刪除
 function deleteSelected(){
-  const cart=JSON.parse(localStorage.getItem("cart")||"[]");
-  const checked=[...document.querySelectorAll("#cartList input[type=checkbox]:checked")].map(c=>parseInt(c.dataset.index));
+  const cart = JSON.parse(localStorage.getItem("cart")||"[]");
+  const checked = [...document.querySelectorAll("#cartList input[type=checkbox]:checked")].map(c=>parseInt(c.dataset.index));
   if(!checked.length){ showToast("請選擇要刪除的項目"); return; }
-  const newCart=cart.filter((_,i)=>!checked.includes(i));
+  const newCart = cart.filter((_,i)=>!checked.includes(i));
   localStorage.setItem("cart",JSON.stringify(newCart));
   renderCart();
   updateCartCount();
   showToast("已刪除選取項目");
 }
 
+// 初始化購物車數量
 updateCartCount();
 </script>
+
 </body>
 </html>
