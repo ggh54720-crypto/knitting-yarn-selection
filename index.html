@@ -1,324 +1,256 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>手混線</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>手混線 MIX</title>
 
 <style>
-body {
-  margin: 0;
-  font-family: sans-serif;
-  background: #fafafa;
-  padding-bottom: 35vh;
+*{ box-sizing:border-box; }
+body{
+  margin:0;
+  font-family: system-ui, sans-serif;
+  background:#f2f2f2;
 }
 
-.app {
-  max-width: 900px;
-  margin: auto;
-  padding: 16px;
+/* ===== 上方選線區 ===== */
+#home{
+  padding:16px;
+  padding-bottom:35vh;
 }
 
-/* ===== 線材列表 ===== */
-.yarns {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-  gap: 12px;
+.yarns{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(110px,1fr));
+  gap:14px;
 }
 
-.yarn {
-  border: 2px solid #eee;
-  border-radius: 12px;
-  padding: 6px;
-  text-align: center;
-  position: relative;
-  cursor: pointer;
-  transition: .2s;
+.yarn{
+  background:#fff;
+  border-radius:16px;
+  padding:8px;
+  text-align:center;
+  cursor:pointer;
+  box-shadow:0 6px 18px rgba(0,0,0,.08);
+  transition:.2s;
+}
+.yarn:hover{ transform:translateY(-4px); }
+
+.yarn img{
+  width:100%;
+  border-radius:12px;
+}
+.yarn input{ display:none; }
+.yarn.selected{
+  outline:3px solid #ff8f66;
 }
 
-.yarn.selected { border-color: #ff8f66; }
-
-.yarn img {
-  width: 100%;
-  border-radius: 8px;
+/* ===== 底部控制區 ===== */
+#control{
+  position:fixed;
+  bottom:0;
+  left:0;
+  width:100%;
+  height:33vh;
+  background:#ddd;
+  border-radius:24px 24px 0 0;
+  padding:16px;
+  box-shadow:0 -10px 30px rgba(0,0,0,.15);
+  display:flex;
+  flex-direction:column;
+  gap:14px;
 }
 
-.number-box {
-  position: absolute;
-  top: 4px;
-  left: 4px;
-  width: 22px;
-  height: 22px;
-  background: #ff8f66;
-  color: #fff;
-  border-radius: 6px;
-  font-size: 12px;
-  line-height: 22px;
-  display: none;
+/* slots */
+#slots{
+  display:grid;
+  grid-template-columns:repeat(7,1fr);
+  gap:10px;
 }
 
-/* 缺貨樣式 */
-.yarn.soldout {
-  opacity: .4;
-  pointer-events: none;
-}
-.yarn.soldout::after {
-  content: "缺貨";
-  position: absolute;
-  inset: 0;
-  background: rgba(0,0,0,.5);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 12px;
+.slot{
+  background:#fff;
+  border-radius:14px;
+  aspect-ratio:1/1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  box-shadow:0 4px 12px rgba(0,0,0,.12);
+  overflow:hidden;
+  position:relative;
+  cursor:pointer;
 }
 
-/* ===== 底部灰色區 ===== */
-#bottomPanel {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 33vh;
-  background: #eee;
-  box-shadow: 0 -4px 12px rgba(0,0,0,.1);
-  display: flex;
-  flex-direction: column;
-  padding: 12px;
-  z-index: 100;
+.slot img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
 }
 
-/* 6 個選線格 */
-#slotRow {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 8px;
-  margin-bottom: 10px;
+/* slot 移除提示 */
+.slot::after{
+  content:"×";
+  position:absolute;
+  top:4px;
+  right:6px;
+  font-size:18px;
+  color:#fff;
+  background:rgba(0,0,0,.4);
+  width:20px;
+  height:20px;
+  border-radius:50%;
+  display:none;
+  align-items:center;
+  justify-content:center;
+}
+.slot:hover::after{ display:flex; }
+
+/* MIX slot */
+.slot.mix{
+  outline:3px solid #ff8f66;
+  cursor:default;
+}
+.slot.mix::after{ display:none; }
+
+/* MIX loading */
+.mix.loading{
+  background:linear-gradient(100deg,#eee 40%,#ddd 50%,#eee 60%);
+  background-size:200% 100%;
+  animation:shimmer 1.2s infinite;
+}
+@keyframes shimmer{
+  to{ background-position:-200% 0; }
 }
 
-.slot {
-  background: #fff;
-  border-radius: 10px;
-  border: 2px dashed #ccc;
-  height: 80px;
-  position: relative;
-  overflow: hidden;
-  cursor: pointer;
+/* button */
+#addCart{
+  margin-top:auto;
+  padding:14px;
+  border:none;
+  border-radius:16px;
+  font-size:18px;
+  background:#ff8f66;
+  color:#fff;
+  cursor:pointer;
 }
-
-.slot img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.slot span {
-  position: absolute;
-  top: 4px;
-  left: 4px;
-  background: #ff8f66;
-  color: #fff;
-  font-size: 12px;
-  padding: 2px 6px;
-  border-radius: 6px;
-}
-
-/* MIX 預覽 */
-#mixPreview {
-  flex: 1;
-  background: #fff;
-  border-radius: 14px;
-  border: 2px solid #ddd;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-
-#mixPreview img {
-  width: 160px;
-  height: 160px;
-  object-fit: cover;
-  border-radius: 12px;
-  margin-bottom: 10px;
-}
-
-/* 按鈕 */
-#addCartBtn {
-  background: #ff8f66;
-  color: #fff;
-  border: none;
-  border-radius: 12px;
-  padding: 12px 20px;
-  font-size: 16px;
-  cursor: pointer;
-}
-
-/* Toast */
-#toast {
-  position: fixed;
-  bottom: 40vh;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #333;
-  color: #fff;
-  padding: 10px 20px;
-  border-radius: 10px;
-  opacity: 0;
-  transition: .3s;
-}
+#addCart:hover{ opacity:.85; }
 </style>
 </head>
 
 <body>
 
-<div class="app">
-  <h3>🧶 手混線</h3>
-
+<!-- 上方選線 -->
+<div id="home">
   <div class="yarns">
-    <label class="yarn"><div class="number-box"></div><input hidden type="checkbox" value="A"><img src="images/A.jpg"><div>奶茶燕麥</div></label>
-    <label class="yarn"><div class="number-box"></div><input hidden type="checkbox" value="B"><img src="images/B.jpg"><div>霧藍海鹽</div></label>
-    <label class="yarn"><div class="number-box"></div><input hidden type="checkbox" value="C"><img src="images/C.jpg"><div>森林橄欖</div></label>
-    <label class="yarn"><div class="number-box"></div><input hidden type="checkbox" value="D"><img src="images/D.jpg"><div>夕陽橘</div></label>
-    <label class="yarn"><div class="number-box"></div><input hidden type="checkbox" value="E"><img src="images/E.jpg"><div>粉紅櫻花</div></label>
-    <label class="yarn"><div class="number-box"></div><input hidden type="checkbox" value="F"><img src="images/F.jpg"><div>天空藍</div></label>
+    <label class="yarn"><input type="checkbox" value="A"><img src="images/A.jpg"><div>A</div></label>
+    <label class="yarn"><input type="checkbox" value="B"><img src="images/B.jpg"><div>B</div></label>
+    <label class="yarn"><input type="checkbox" value="C"><img src="images/C.jpg"><div>C</div></label>
+    <label class="yarn"><input type="checkbox" value="D"><img src="images/D.jpg"><div>D</div></label>
+    <label class="yarn"><input type="checkbox" value="E"><img src="images/E.jpg"><div>E</div></label>
+    <label class="yarn"><input type="checkbox" value="F"><img src="images/F.jpg"><div>F</div></label>
   </div>
 </div>
 
-<div id="bottomPanel">
-  <div id="slotRow">
-    <div class="slot"></div><div class="slot"></div><div class="slot"></div>
-    <div class="slot"></div><div class="slot"></div><div class="slot"></div>
+<!-- 底部控制區 -->
+<div id="control">
+  <div id="slots">
+    <div class="slot" data-index="0"></div>
+    <div class="slot" data-index="1"></div>
+    <div class="slot" data-index="2"></div>
+    <div class="slot" data-index="3"></div>
+    <div class="slot" data-index="4"></div>
+    <div class="slot" data-index="5"></div>
+    <div class="slot mix"></div>
   </div>
 
-  <div id="mixPreview">
-    <img id="mixImg" src="images/placeholder.jpg">
-    <button id="addCartBtn">加入購物車</button>
-  </div>
+  <button id="addCart">加入購物車</button>
 </div>
-
-<div id="toast"></div>
 
 <script>
+const MAX = 6;
 let selected = [];
-let stockData = {};
 
-/* Toast */
-function showToast(msg){
-  const t = document.getElementById("toast");
-  t.innerText = msg;
-  t.style.opacity = 1;
-  setTimeout(()=>t.style.opacity=0,1500);
-}
+/* 上方選線 */
+document.querySelectorAll(".yarn input").forEach(inp=>{
+  inp.addEventListener("change",()=>{
+    const v = inp.value;
 
-/* 線材點擊 */
-document.querySelectorAll(".yarn").forEach(y=>{
-  y.addEventListener("click", ()=>{
-    const input = y.querySelector("input");
-    if(y.classList.contains("soldout")) return;
-
-    if(!input.checked && selected.length >= 6){
-      showToast("最多只能選 6 種線材");
-      return;
+    if(inp.checked){
+      if(selected.length >= MAX){
+        inp.checked = false;
+        return;
+      }
+      selected.push(v);
+      inp.closest(".yarn").classList.add("selected");
+    }else{
+      selected = selected.filter(x=>x!==v);
+      inp.closest(".yarn").classList.remove("selected");
     }
-    input.checked = !input.checked;
-    updateSelection();
+    render();
   });
 });
 
-/* 更新選擇 */
-function updateSelection(){
-  selected = [...document.querySelectorAll(".yarn input:checked")].map(i=>i.value);
-
-  document.querySelectorAll(".yarn").forEach(y=>{
-    const i = y.querySelector("input");
-    const box = y.querySelector(".number-box");
-    if(i.checked){
-      y.classList.add("selected");
-      box.style.display="block";
-      box.innerText = selected.indexOf(i.value)+1;
-    } else {
-      y.classList.remove("selected");
-      box.style.display="none";
+/* slot 點擊移除 */
+document.querySelectorAll(".slot").forEach(slot=>{
+  slot.addEventListener("click",()=>{
+    if(slot.classList.contains("mix")) return;
+    const i = slot.dataset.index;
+    if(selected[i]){
+      const val = selected[i];
+      selected.splice(i,1);
+      document.querySelector(`.yarn input[value="${val}"]`).checked = false;
+      document.querySelector(`.yarn input[value="${val}"]`).closest(".yarn").classList.remove("selected");
+      render();
     }
   });
+});
 
-  document.querySelectorAll(".slot").forEach((s,i)=>{
+function render(){
+  const slots = document.querySelectorAll(".slot:not(.mix)");
+  slots.forEach((s,i)=>{
     s.innerHTML="";
     if(selected[i]){
-      const img=document.createElement("img");
-      img.src=`images/${selected[i]}.jpg`;
-      const tag=document.createElement("span");
-      tag.innerText=i+1;
-      s.append(img,tag);
-      s.onclick=()=>{
-        document.querySelector(`input[value="${selected[i]}"]`).checked=false;
-        updateSelection();
-      };
+      const img = document.createElement("img");
+      img.src = `images/${selected[i]}.jpg`;
+      s.appendChild(img);
     }
   });
 
-  updateMixPreview();
+  renderMix();
 }
 
-/* MIX 圖 */
-function updateMixPreview(){
-  const img=document.getElementById("mixImg");
-  if(!selected.length){
+function renderMix(){
+  const mixSlot = document.querySelector(".slot.mix");
+  mixSlot.innerHTML="";
+  mixSlot.classList.remove("loading");
+
+  if(!selected.length) return;
+
+  const key = selected.slice().sort().join("-");
+  const img = document.createElement("img");
+  mixSlot.classList.add("loading");
+
+  img.onload = ()=>{
+    mixSlot.classList.remove("loading");
+    img.style.opacity=0;
+    mixSlot.appendChild(img);
+    requestAnimationFrame(()=>img.style.opacity=1);
+  };
+
+  img.onerror = ()=>{
+    mixSlot.classList.remove("loading");
     img.src="images/placeholder.jpg";
-    return;
-  }
-  const path=`images/mix/${selected.join("-")}.jpg`;
-  const t=new Image();
-  t.onload=()=>img.src=path;
-  t.onerror=()=>img.src=`images/${selected[0]}.jpg`;
-  t.src=path;
+    mixSlot.appendChild(img);
+  };
+
+  img.src = `images/mix/${key}.jpg`;
 }
 
-/* 庫存即時更新 */
-async function fetchStock(){
-  try{
-    const res=await fetch("stock.json?_="+Date.now());
-    stockData=await res.json();
-
-    document.querySelectorAll(".yarn").forEach(y=>{
-      const val=y.querySelector("input").value;
-      if(stockData[val]===false){
-        y.classList.add("soldout");
-        y.querySelector("input").checked=false;
-      } else {
-        y.classList.remove("soldout");
-      }
-    });
-    updateSelection();
-  }catch(e){
-    console.warn("庫存讀取失敗");
-  }
-}
-setInterval(fetchStock,15000);
-fetchStock();
-
-/* 加入購物車 */
-document.getElementById("addCartBtn").onclick=async()=>{
-  if(!selected.length){
-    showToast("請先選擇線材");
-    return;
-  }
-  for(const v of selected){
-    if(stockData[v]===false){
-      showToast("有線材已售完，請重新選擇");
-      fetchStock();
-      return;
-    }
-  }
-  const cart=JSON.parse(localStorage.getItem("cart")||"[]");
-  cart.push({key:"MIX-"+selected.join("-"),combo:[...selected]});
-  localStorage.setItem("cart",JSON.stringify(cart));
-  showToast("已加入購物車");
-  document.querySelectorAll(".yarn input").forEach(i=>i.checked=false);
-  updateSelection();
+document.getElementById("addCart").onclick=()=>{
+  if(!selected.length) return alert("請先選線");
+  alert("加入購物車：MIX-" + selected.slice().sort().join("-"));
 };
 </script>
+
 </body>
 </html>
